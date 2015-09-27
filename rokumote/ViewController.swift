@@ -38,7 +38,7 @@ class KeyPressView : NSVisualEffectView {
 extension String {
     init(sep:String, _ lines:String...){
         self = ""
-        for (idx, item) in enumerate(lines) {
+        for (idx, item) in lines.enumerate() {
             self += "\(item)"
             if idx < lines.count-1 {
                 self += sep
@@ -48,7 +48,7 @@ extension String {
     
     init(_ lines:String...){
         self = ""
-        for (idx, item) in enumerate(lines) {
+        for (idx, item) in lines.enumerate() {
             self += "\(item)"
             if idx < lines.count-1 {
                 self += "\n"
@@ -62,9 +62,9 @@ extension String {
     
     subscript (i: Int) -> Character {
         if i < 0 {
-            return self[advance(self.endIndex, i)]
+            return self[self.endIndex.advancedBy(i)]
         }
-        return self[advance(self.startIndex, i)]
+        return self[self.startIndex.advancedBy(i)]
     }
     
     subscript (i: Int) -> String {
@@ -72,7 +72,7 @@ extension String {
     }
     
     subscript (r: Range<Int>) -> String {
-        return substringWithRange(Range(start: advance(startIndex, r.startIndex), end: advance(startIndex, r.endIndex)))
+        return substringWithRange(Range(start: startIndex.advancedBy(r.startIndex), end: startIndex.advancedBy(r.endIndex)))
     }
 }
 
@@ -88,7 +88,7 @@ func delay(delay:Double, closure:()->()) {
 }
 
 func alert(msg: String) {
-    var alert = NSAlert()
+    let alert = NSAlert()
     alert.messageText = msg
     alert.runModal()
 }
@@ -114,13 +114,13 @@ class RokuApi: NSObject {
      * WARNING unfinished, does not work...
      */
     func discover() -> String {
-        let message = "\r\n".join([
+        let message = [
             "M-SEARCH * HTTP/1.1",
             "HOST: 239.255.255.250:1900",
             "MAN: \"ssdp:discover\"",
             "ST: roku:ecp",
             "MX: 3",
-            "", "" ])
+            "", "" ].joinWithSeparator("\r\n")
         
         let client = UDPClient(addr: "239.255.255.250", port: 1900)
         var (success,errmsg)=client.send(str:message)
@@ -137,11 +137,11 @@ class RokuApi: NSObject {
             LOCATION: http://10.77.77.48:8060/.
             */
             if sdata!.rangeOfString("Server: Roku") != nil {
-                println("Found rokuhost: ", addr)
+                print("Found rokuhost: ", addr)
                 return addr
             }
         } else {
-            println(errmsg)
+            print(errmsg)
         }
         return ""
     }
@@ -165,8 +165,8 @@ class RokuApi: NSObject {
         let uri = self.getUri(self.host!, cmd: cmd)
         Alamofire.request(.POST, uri )
         .responseString { (request, response, string, error) in
-            println("response: \(response)")
-            println("cmd: \(cmd) returned \(string)")
+            print("response: \(response)")
+            print("cmd: \(cmd) returned \(string)")
         }
     }
 
@@ -242,7 +242,7 @@ class RokuApi: NSObject {
 
     func literal(str: String) {
         var i: Int = 0
-        for c in str.capitalizedString {
+        for c in str.capitalizedString.characters {
             delay(0.01 * Double(i)) {
                 self.sendcmd("keypress/Lit_\(c)")
             }
@@ -352,7 +352,7 @@ class ViewController: NSViewController, NSTextFieldDelegate {
     
 
     func setTheme(theme: String) {
-        var mainview:NSVisualEffectView = self.view as! NSVisualEffectView
+        let mainview:NSVisualEffectView = self.view as! NSVisualEffectView
         mainview.blendingMode = NSVisualEffectBlendingMode.BehindWindow
         if "transdark" == theme {
             // set it to always be blurry regardless of window state
@@ -380,10 +380,10 @@ class ViewController: NSViewController, NSTextFieldDelegate {
             setTheme("transdark")
         }
         
-        var kpview = self.view as! KeyPressView
+        let kpview = self.view as! KeyPressView
         kpview.becomeFirstResponder()
         kpview.keypressed = {(key: String) in
-            println("key:" + key)
+            print("key:" + key)
         }
     }
 
@@ -393,9 +393,9 @@ class ViewController: NSViewController, NSTextFieldDelegate {
             self.roku.host = host
             // setup our dropdown
             self.roku.getApps() { (apps:[String:String]) in
-                for name in sorted(apps.keys) {
+                for name in apps.keys.sort() {
                     self.apps[name] = apps[name]!
-                    println(name)
+                    print(name)
                     self.appsPopup.addItemWithTitle(name)
                 }
             }
@@ -423,17 +423,17 @@ class ViewController: NSViewController, NSTextFieldDelegate {
     // MARK: uitextfield delegate
     
     override func controlTextDidChange(obj: NSNotification) {
-        var currstr = self.inputField.stringValue
+        let currstr = self.inputField.stringValue
         if currstr == oldText {
             return
         }
-        if count(currstr) < count(oldText) {
+        if currstr.characters.count < oldText.characters.count {
             // send delete
             roku.backspace()
             oldText = currstr
         }
-        if count(currstr) > count(oldText) {
-            var char:String = currstr[-1]
+        if currstr.characters.count > oldText.characters.count {
+            let char:String = currstr[-1]
             oldText = currstr
             roku.literal(char)
         }
@@ -491,15 +491,15 @@ class ViewController: NSViewController, NSTextFieldDelegate {
     
     @IBAction func clickQuickLaunch(sender: NSButton) {
         let name = self.appsPopup.selectedItem?.title
-        if (count(self.apps) > 0) &&  name != nil{
+        if (self.apps.count > 0) &&  name != nil{
             if name == "..quickapp" { return }
-            print("name: ")
-            print(name)
+            print("name: ", terminator: "")
+            print(name, terminator: "")
             let id = self.apps[name!]!
-            println("APPS:")
-            println(self.apps)
-            print(" id: ")
-            println(id)
+            print("APPS:")
+            print(self.apps)
+            print(" id: ", terminator: "")
+            print(id)
             self.roku.launchApp(id)
             }
     }
